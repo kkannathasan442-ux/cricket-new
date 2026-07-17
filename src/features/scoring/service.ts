@@ -5,6 +5,7 @@ import {
   type InningsRow,
   type MatchScoringContext,
   type PlayerOption,
+  type PlayingXiRow,
   type TeamSummary,
 } from "@/features/scoring";
 
@@ -37,7 +38,7 @@ export async function getMatchScoringContext(
   const { data: match, error: matchError } = await supabase
     .from(DB.TABLES.matches)
     .select(
-      "id, tournament_id, team_a_id, team_b_id, tournaments(tournament_name)",
+      "id, tournament_id, team_a_id, team_b_id, toss_winner_id, status, tournaments(tournament_name)",
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -49,6 +50,8 @@ export async function getMatchScoringContext(
     team_a_id: string;
     team_b_id: string;
     tournaments?: { tournament_name: string | null } | null;
+    toss_winner_id?: string | null;
+    status?: string | null;
   };
 
   // All innings for the match.
@@ -123,6 +126,15 @@ export async function getMatchScoringContext(
     }
   }
 
+  // Playing XI for this match (restricts batter/bowler selection).
+  const { data: xiRows } = await supabase
+    .from(DB.TABLES.playingXi)
+    .select("*")
+    .eq(DB.playingXi.matchId, matchId);
+  const playingXi = (xiRows ?? []) as unknown as PlayingXiRow[];
+  const matchStarted =
+    !!m.toss_winner_id || playingXi.length > 0 || m.status === "live";
+
   return {
     matchId,
     tournamentId: m.tournament_id,
@@ -139,6 +151,8 @@ export async function getMatchScoringContext(
     recentBalls: [...recentBalls].reverse(),
     requiresBowlerChange,
     requiresNextBatsman,
+    playingXi,
+    matchStarted,
   };
 }
 

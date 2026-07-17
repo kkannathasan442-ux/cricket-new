@@ -116,3 +116,43 @@ export function resolveMatchResult(params: {
     secondTeamId,
   };
 }
+
+/**
+ * Net Run Rate (NRR) for a team: (runs for / balls faced) - (runs against / balls bowled).
+ * `balls` values are legal-ball counts.
+ */
+export function calculateNRR(params: {
+  runsFor: number;
+  ballsFaced: number;
+  runsAgainst: number;
+  ballsBowled: number;
+}): number {
+  const forRate = params.ballsFaced > 0 ? params.runsFor / params.ballsFaced : 0;
+  const againstRate =
+    params.ballsBowled > 0 ? params.runsAgainst / params.ballsBowled : 0;
+  return Number((forRate - againstRate).toFixed(3));
+}
+
+/** Converts an overs display value (e.g. 19.5) to a legal-ball count. */
+export function oversToBalls(overs: number): number {
+  const completed = Math.floor(overs);
+  const remainder = Math.round((overs - completed) * 10);
+  return completed * BALLS_PER_OVER + remainder;
+}
+
+/** Current Run Rate from runs and legal balls bowled. */
+export function currentRunRate(runs: number, ballsBowled: number): number {
+  if (ballsBowled <= 0) return 0;
+  return Number(((runs / ballsBowled) * BALLS_PER_OVER).toFixed(2));
+}
+
+/** Required Run Rate for the chasing team. */
+export function requiredRunRate(
+  target: number,
+  runsSoFar: number,
+  ballsRemaining: number,
+): number {
+  const needed = target - runsSoFar;
+  if (ballsRemaining <= 0 || needed <= 0) return 0;
+  return Number(((needed / ballsRemaining) * BALLS_PER_OVER).toFixed(2));
+}
