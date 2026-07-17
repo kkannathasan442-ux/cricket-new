@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/common";
 import { ScoreControls } from "@/components/admin/scoring/ScoreControls";
-import { getMatchScoringContext } from "@/features/scoring/service";
+import { getMatchScoringContext, getInningsPlayers } from "@/features/scoring/service";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +14,7 @@ export default async function MatchScorePage({
 }) {
   const { id } = await params;
   const context = await getMatchScoringContext(id);
+  const players = context ? await getInningsPlayers(id) : { batting: [], bowling: [] };
 
   if (!context) {
     return (
@@ -62,7 +63,7 @@ export default async function MatchScorePage({
           </h1>
         </header>
 
-        <ScoreControls context={context} />
+        <ScoreControls context={context} players={players} />
       </div>
     </PageShell>
   );

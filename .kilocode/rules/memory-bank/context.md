@@ -43,9 +43,25 @@ Foundation is complete. Awaiting Phase 2: Tournament system, Team/Player modules
 - [x] Uses EXISTING tables only: innings, overs, ball_by_ball, match_events. NO new match_innings/balls tables.
 - [x] Realtime intentionally NOT used (normal API + router.refresh state updates per instructions)
 
+## Recently Completed (Phase 4 — Full Cricket Rules)
+
+- [x] All delivery types: dot, runs (0/1/2/3/4/6), wide, no-ball, bye, leg-bye, overthrow, wicket
+- [x] Legal/illegal ball counting (only legal balls advance over) in `rules.ts`
+- [x] Automatic strike rotation (odd runs) + over completion detection
+- [x] Bowler-change modal after each over; Next-batsman modal after wicket (SelectionModal)
+- [x] End-innings flow: completes innings, computes target, auto-starts 2nd innings (`innings.ts`)
+- [x] Match result engine: win_by_runs / win_by_wickets / tie / no_result (`resolveMatchResult`)
+- [x] Batting + bowling scorecard upserts + player lifetime stats (`player_stats`) on every ball + undo
+- [x] Tournament points table update (win=2, loss=0, tie/no-result=1) on finalize
+- [x] Transaction helper (`transaction.ts`) via `crickpulse_transaction` RPC w/ sequential fallback
+- [x] Public live scoreboard with Supabase Realtime (no refresh) + `/api/match/[id]/scoreboard` GET
+- [x] Centralized `DB` mapping extended to scorecards/player_stats/points_table
+
 ## Open Issue / Assumption
 
-- `007_live_scoring.sql` was NOT present in the repo. Column mapping in `src/features/scoring/index.ts` `DB` object is the assumed contract for the existing tables. Reconcile `DB` mapping with the real migration before connecting a live DB.
+- `007_live_scoring.sql` still NOT present. `DB` mapping in `src/features/scoring/index.ts` is the assumed contract. Reconcile before connecting a live DB.
+- `crickpulse_transaction` RPC must be created in DB for true atomic transactions (falls back to sequential writes otherwise).
+- `players` table has no team linkage, so modals list all players (filter by playing-XI when available).
 
 ## Session History
 
@@ -53,3 +69,4 @@ Foundation is complete. Awaiting Phase 2: Tournament system, Team/Player modules
 |------|---------|
 | 2026-07-17 | Phase 1 foundation: full project architecture scaffold built & verified (typecheck/lint/build green) |
 | 2026-07-17 | Scoring MVP: admin score page, ScoreControls, scoring API, feature module w/ existing-table mapping |
+| 2026-07-17 | Phase 4: full cricket rules engine, scorecards, player stats, points table, realtime public scoreboard |

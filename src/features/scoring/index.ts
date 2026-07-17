@@ -29,6 +29,10 @@ export const DB = {
     innings: "innings",
     overs: "overs",
     ballByBall: "ball_by_ball",
+    battingScorecard: "batting_scorecard",
+    bowlingScorecard: "bowling_scorecard",
+    playerStats: "player_stats",
+    pointsTable: "points_table",
     matchEvents: "match_events",
   },
   // ball_by_ball columns
@@ -63,6 +67,63 @@ export const DB = {
     isCompleted: "is_completed",
     createdAt: "created_at",
   },
+  // batting_scorecard columns
+  batting: {
+    id: "id",
+    inningsId: "innings_id",
+    playerId: "player_id",
+    runs: "runs",
+    ballsFaced: "balls_faced",
+    fours: "fours",
+    sixes: "sixes",
+    isOut: "is_out",
+    dismissalType: "dismissal_type",
+    retiredHurt: "retired_hurt",
+    strike: "strike",
+  },
+  // bowling_scorecard columns
+  bowling: {
+    id: "id",
+    inningsId: "innings_id",
+    playerId: "player_id",
+    overs: "overs",
+    ballsBowled: "balls_bowled",
+    runsConceded: "runs_conceded",
+    wickets: "wickets",
+    wides: "wides",
+    noBalls: "no_balls",
+  },
+  // player_stats columns (lifetime aggregates)
+  playerStats: {
+    id: "id",
+    playerId: "player_id",
+    matches: "matches",
+    runs: "runs",
+    ballsFaced: "balls_faced",
+    fours: "fours",
+    sixes: "sixes",
+    fifties: "fifties",
+    hundreds: "hundreds",
+    wickets: "wickets",
+    ballsBowled: "balls_bowled",
+    runsConceded: "runs_conceded",
+    motmAwards: "motm_awards",
+    updatedAt: "updated_at",
+  },
+  // points_table columns
+  pointsTable: {
+    id: "id",
+    tournamentId: "tournament_id",
+    teamId: "team_id",
+    played: "played",
+    won: "won",
+    lost: "lost",
+    tied: "tied",
+    noResult: "no_result",
+    points: "points",
+    nrr: "nrr",
+    rank: "rank",
+  },
   // match_events columns
   matchEvent: {
     id: "id",
@@ -80,13 +141,25 @@ export const DB = {
 
 export type ScoringActionType =
   | "run"
-  | "wicket"
   | "wide"
   | "no_ball"
   | "bye"
   | "leg_bye"
   | "overthrow"
+  | "wicket"
+  | "end_innings"
   | "undo";
+
+/** A delivery that counts as a legal ball (advances over). */
+export const LEGAL_DELIVERIES: ScoringActionType[] = ["run", "wicket"];
+/** A delivery that does NOT count as a legal ball. */
+export const ILLEGAL_DELIVERIES: ScoringActionType[] = [
+  "wide",
+  "no_ball",
+  "bye",
+  "leg_bye",
+  "overthrow",
+];
 
 export interface ScoringPayload {
   /** Type of action the admin performed. */
@@ -95,12 +168,155 @@ export interface ScoringPayload {
   runs?: number;
   /** Batsman on strike for this delivery. */
   batsmanId?: string;
+  /** Non-striker (for wickets where partner may be involved, optional). */
+  nonStrikerId?: string;
   /** Bowler delivering this ball. */
   bowlerId?: string;
   /** Dismissal method (for `wicket` actions). */
   dismissalType?: DismissalType;
-  /** ID of the delivery to revert (for `undo`). */
-  revertBallId?: string;
+  /** Next batsman to send in after a wicket (for `wicket` action). */
+  nextBatsmanId?: string;
+  /** New bowler for the next over (for over-completion bowler change). */
+  nextBowlerId?: string;
+}
+
+/** Batting scorecard row (snake_case to match existing schema). */
+export interface BattingScorecardRow {
+  id: string;
+  innings_id: string;
+  player_id: string;
+  runs: number;
+  balls_faced: number;
+  fours: number;
+  sixes: number;
+  is_out: boolean;
+  dismissal_type: DismissalType | null;
+  retired_hurt: boolean;
+  strike: 1 | 2 | null;
+}
+
+/** Bowling scorecard row (snake_case to match existing schema). */
+export interface BowlingScorecardRow {
+  id: string;
+  innings_id: string;
+  player_id: string;
+  overs: number;
+  balls_bowled: number;
+  runs_conceded: number;
+  wickets: number;
+  wides: number;
+  no_balls: number;
+}
+
+/** Player lifetime stats row. */
+export interface PlayerStatsRow {
+  id: string;
+  player_id: string;
+  matches: number;
+  runs: number;
+  balls_faced: number;
+  fours: number;
+  sixes: number;
+  fifties: number;
+  hundreds: number;
+  wickets: number;
+  balls_bowled: number;
+  runs_conceded: number;
+  motm_awards: number;
+  updated_at: string;
+}
+
+/** Points table row. */
+export interface PointsTableRow {
+  id: string;
+  tournament_id: string;
+  team_id: string;
+  played: number;
+  won: number;
+  lost: number;
+  tied: number;
+  no_result: number;
+  points: number;
+  nrr: number;
+  rank: number;
+}
+
+/** Match result computed by the result engine. */
+export interface MatchResult {
+  resultType: "win_by_runs" | "win_by_wickets" | "tie" | "no_result";
+  winnerId: string | null;
+  margin: number | null;
+}
+
+/** Raw `ball_by_ball` row shape (snake_case, matches existing DB schema). */
+export interface BallEventRow {
+  id: string;
+  innings_id: string;
+  over_number: number;
+  ball_number: number;
+  batsman_id: string;
+  bowler_id: string;
+  runs: number;
+  extras: number;
+  extras_type: string | null;
+  is_legal: boolean;
+  is_wicket: boolean;
+  dismissal_type: DismissalType | null;
+  created_at: string;
+}
+
+/** Raw `innings` row shape (snake_case, matches existing DB schema). */
+export interface InningsRow {
+  id: string;
+  match_id: string;
+  innings_number: 1 | 2;
+  batting_team_id: string;
+  bowling_team_id: string;
+  total_runs: number;
+  total_wickets: number;
+  overs_completed: number;
+  balls_bowled: number;
+  extras: number;
+  target: number | null;
+  is_completed: boolean;
+}
+
+export interface TeamSummary {
+  id: string;
+  teamName: string;
+}
+
+export interface PlayerSummary {
+  id: string;
+  playerName: string;
+}
+
+/** Full context supplied to the admin score page + public scoreboard. */
+export interface MatchScoringContext {
+  matchId: string;
+  tournamentId: string | null;
+  tournamentName: string | null;
+  teamA: TeamSummary;
+  teamB: TeamSummary;
+  innings: InningsRow | null;
+  inningsList: InningsRow[];
+  battingTeam: TeamSummary | null;
+  bowlingTeam: TeamSummary | null;
+  striker: PlayerSummary | null;
+  nonStriker: PlayerSummary | null;
+  bowler: PlayerSummary | null;
+  recentBalls: BallEventRow[];
+  /** True when the just-completed over requires a bowler change. */
+  requiresBowlerChange: boolean;
+  /** True when a wicket requires the next batsman selection. */
+  requiresNextBatsman: boolean;
+}
+
+/** Player listing used by modals (selection dropdowns). */
+export interface PlayerOption {
+  id: string;
+  playerName: string;
+  role: string;
 }
 
 /** Raw `ball_by_ball` row shape (snake_case, matches existing DB schema). */

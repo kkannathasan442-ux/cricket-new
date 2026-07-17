@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 
-import {
-  applyScoringEvent,
-  undoLastBall,
-} from "@/features/scoring/engine";
+import { applyScoringEvent, undoLastBall } from "@/features/scoring/engine";
+import { endInnings } from "@/features/scoring/innings";
 import {
   type ScoringActionType,
   type ScoringPayload,
@@ -12,6 +10,15 @@ import {
 export const dynamic = "force-dynamic";
 
 const VALID_RUNS = new Set([0, 1, 2, 3, 4, 6]);
+const DELIVERY_ACTIONS: ScoringActionType[] = [
+  "run",
+  "wide",
+  "no_ball",
+  "bye",
+  "leg_bye",
+  "overthrow",
+  "wicket",
+];
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -26,13 +33,10 @@ export async function POST(
   const { id: matchId } = await params;
 
   if (!isUuid(matchId)) {
-    return NextResponse.json(
-      { error: "Invalid match id." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid match id." }, { status: 400 });
   }
 
-  let body: Partial<ScoringPayload>;
+  let body: Partial<ScoringPayload> & { action?: string };
   try {
     body = await request.json();
   } catch {
@@ -50,6 +54,22 @@ export async function POST(
       return NextResponse.json({ ok: true, innings });
     }
 
+    if (action === "end_innings") {
+      const { completed, nextInnings } = await endInnings(matchId);
+      return NextResponse.json({
+        ok: true,
+        completedInnings: completed,
+        nextInnings,
+      });
+    }
+
+    if (!DELIVERY_ACTIONS.includes(action)) {
+      return NextResponse.json(
+        { error: `Unsupported action: ${action}` },
+        { status: 400 },
+      );
+    }
+
     if (action === "run") {
       if (typeof body.runs !== "number" || !VALID_RUNS.has(body.runs)) {
         return NextResponse.json(
@@ -59,20 +79,31 @@ export async function POST(
       }
     }
 
-    if (action === "wicket" && body.dismissalType === undefined) {
-      // dismissalType optional upstream; default allowed.
+    if (action === "wicket" && !body.dismissalType) {
+      return NextResponse.json(
+        { error: "Dismissal type is required for a wicket." },
+        { status: 400 },
+      );
     }
 
     const payload: ScoringPayload = {
       action,
       runs: body.runs,
       batsmanId: body.batsmanId,
+      nonStrikerId: body.nonStrikerId,
       bowlerId: body.bowlerId,
       dismissalType: body.dismissalType,
+      nextBatsmanId: body.nextBatsmanId,
+      nextBowlerId: body.nextBowlerId,
     };
 
-    const { ball, innings } = await applyScoringEvent(matchId, payload);
-    return NextResponse.json({ ok: true, ball, innings });
+    const result = await applyScoringEvent(matchId, payload);
+    return NextResponse.json({
+      ok: true,
+      ball: result.ball,
+      innings: result.innings,
+      overCompleted: result.overCompleted,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Scoring failed.";
     return NextResponse.json({ error: message }, { status: 500 });
