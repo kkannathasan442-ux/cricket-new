@@ -79,11 +79,8 @@ export async function getMatchScoringContext(
   let battingTeam: TeamSummary | null = null;
   let bowlingTeam: TeamSummary | null = null;
   let striker: MatchScoringContext["striker"] = null;
-  let nonStriker: MatchScoringContext["nonStriker"] = null;
   let bowler: MatchScoringContext["bowler"] = null;
   let recentBalls: BallEventRow[] = [];
-  let requiresBowlerChange = false;
-  let requiresNextBatsman = false;
 
   if (innings) {
     battingTeam = toSummary(innings.batting_team_id, "Batting");
@@ -120,9 +117,6 @@ export async function getMatchScoringContext(
 
       // Until the next ball is recorded we cannot know the new striker;
       // the UI prompts for the next batsman when the last ball was a wicket.
-      requiresNextBatsman = last.is_wicket;
-      // Over completion is derived from ball count by the client, but we
-      // surface it from the engine result at action time; default false here.
     }
   }
 
@@ -146,11 +140,8 @@ export async function getMatchScoringContext(
     battingTeam,
     bowlingTeam,
     striker,
-    nonStriker,
     bowler,
     recentBalls: [...recentBalls].reverse(),
-    requiresBowlerChange,
-    requiresNextBatsman,
     playingXi,
     matchStarted,
   };
@@ -160,9 +151,8 @@ export async function getMatchScoringContext(
  * Lists players available for the innings' batting & bowling roles so the
  * admin can pick the next batsman / next bowler in the modals.
  *
- * NOTE: the global `players` table is not team-scoped (BRD 6.2 — stats never
- * reset across teams), so we return all players and let the admin choose.
- * When a squad/playing-XI link exists, filter by it here.
+ * Restricts to the confirmed Playing XI for this match (from playing_xi).
+ * When XI is not yet set, falls back to all players.
  */
 export async function getInningsPlayers(
   matchId: string,
@@ -171,10 +161,19 @@ export async function getInningsPlayers(
   const innings = await resolveInnings(supabase, matchId);
   if (!innings) return { batting: [], bowling: [] };
 
-  const { data } = await supabase
-    .from(DB.TABLES.players)
-    .select("id, player_name, role");
+  const { data: xi } = await supabase
+    .from(DB.TABLES.playingXi)
+    .select("player_id")
+    .eq(DB.playingXi.matchId, matchId);
 
+  const xiIds = new Set((xi ?? []).map((row) => (row as unknown as { player_id: string }).player_id));
+
+  let query = supabase.from(DB.TABLES.players).select("id, player_name, role");
+  if (xiIds.size > 0) {
+    query = query.in("id", Array.from(xiIds));
+  }
+
+  const { data } = await query;
   const all: PlayerOption[] = (data ?? []).map((p) => ({
     id: p.id,
     playerName: p.player_name,

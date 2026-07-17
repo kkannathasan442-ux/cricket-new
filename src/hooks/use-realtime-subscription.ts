@@ -5,28 +5,19 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
 
+const client = createClient();
+
 type EventHandler = (payload: unknown) => void;
 
 interface UseRealtimeSubscriptionOptions {
-  /** Target table for the realtime subscription. */
   table: string;
-  /** Optional schema filter. */
   schema?: string;
-  /** Optional row filter (e.g. `id=eq.123`). */
   filter?: string;
-  /** Event types to listen to. Defaults to all. */
   event?: "INSERT" | "UPDATE" | "DELETE" | "*";
-  /** Callback invoked on matching realtime events. */
   onEvent?: EventHandler;
-  /** Whether the subscription is active. */
   enabled?: boolean;
 }
 
-/**
- * Foundation realtime subscription hook for Supabase Realtime.
- * Subscribes to a single table only (per BRD 12: avoid full-DB listeners)
- * and cleans up the channel on unmount.
- */
 export function useRealtimeSubscription({
   table,
   schema = "public",
@@ -35,7 +26,6 @@ export function useRealtimeSubscription({
   onEvent,
   enabled = true,
 }: UseRealtimeSubscriptionOptions) {
-  const [channel, setChannel] = React.useState<RealtimeChannel | null>(null);
   const [isSubscribed, setIsSubscribed] = React.useState(false);
   const handlerRef = React.useRef<EventHandler | undefined>(onEvent);
 
@@ -46,8 +36,7 @@ export function useRealtimeSubscription({
   React.useEffect(() => {
     if (!enabled) return;
 
-    const client = createClient();
-    let activeChannel: RealtimeChannel = client
+    const activeChannel: RealtimeChannel = client
       .channel(`realtime:${table}:${filter ?? "all"}`)
       .on(
         "postgres_changes",
@@ -58,14 +47,11 @@ export function useRealtimeSubscription({
         setIsSubscribed(status === "SUBSCRIBED");
       });
 
-    setChannel(activeChannel);
-
     return () => {
       client.removeChannel(activeChannel);
-      setChannel(null);
       setIsSubscribed(false);
     };
   }, [table, schema, filter, event, enabled]);
 
-  return { channel, isSubscribed };
+  return { isSubscribed };
 }

@@ -1,15 +1,27 @@
 import { PageShell } from "@/components/common/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ErrorState } from "@/components/common/error-state";
 import { listTournaments, type TournamentSummary } from "@/features/tournaments";
 
 export const dynamic = "force-dynamic";
 
 export default async function TournamentsPage() {
   let tournaments: TournamentSummary[] = [];
+  let error;
   try {
     tournaments = await listTournaments();
-  } catch {
-    tournaments = [];
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load tournaments.";
+  }
+
+  if (error) {
+    return (
+      <PageShell>
+        <div className="py-10">
+          <ErrorState message={error} />
+        </div>
+      </PageShell>
+    );
   }
 
   return (

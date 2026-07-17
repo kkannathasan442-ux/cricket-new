@@ -1,15 +1,27 @@
 import { PageShell } from "@/components/common/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ErrorState } from "@/components/common/error-state";
 import { getAdminDashboardStats } from "@/features/matches/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  let stats;
+  let stats = { matches: 0, tournaments: 0, teams: 0, players: 0, liveMatches: 0 };
+  let error;
   try {
     stats = await getAdminDashboardStats();
-  } catch {
-    stats = { matches: 0, tournaments: 0, teams: 0, players: 0, liveMatches: 0 };
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load dashboard.";
+  }
+
+  if (error) {
+    return (
+      <PageShell withBottomNav={false} fluid className="md:py-6">
+        <div className="px-4 md:px-6">
+          <ErrorState message={error} />
+        </div>
+      </PageShell>
+    );
   }
 
   const items = [

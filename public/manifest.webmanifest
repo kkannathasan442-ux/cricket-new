@@ -28,5 +28,25 @@
       "type": "image/png",
       "purpose": "maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live Matches",
+      "url": "/matches",
+      "description": "View live matches"
+    },
+    {
+      "name": "Tournaments",
+      "url": "/tournaments",
+      "description": "Browse tournaments"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
   ]
 }

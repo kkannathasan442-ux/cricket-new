@@ -9,7 +9,6 @@
  */
 
 import { createClient } from "@/lib/supabase/client";
-import { createClient as createServerClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ClientMode = "browser" | "server";
@@ -18,5 +17,5 @@ export type ClientMode = "browser" | "server";
 export async function getSupabase(
   mode: ClientMode = "browser",
 ): Promise<SupabaseClient> {
-  return mode === "server" ? createServerClient() : createClient();
+  return mode === "server" ? createClient() : createClient();
 }

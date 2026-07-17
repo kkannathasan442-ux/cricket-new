@@ -1,4 +1,5 @@
 import { PageShell } from "@/components/common/page-shell";
+import { ErrorState } from "@/components/common/error-state";
 import { listMatches } from "@/features/matches/service";
 import { LiveMatchesGrid } from "@/features/matches/components/live-matches-grid";
 
@@ -6,10 +7,21 @@ export const dynamic = "force-dynamic";
 
 export default async function MatchesPage() {
   let matches: Awaited<ReturnType<typeof listMatches>> = [];
+  let error;
   try {
     matches = await listMatches();
-  } catch {
-    matches = [];
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load matches.";
+  }
+
+  if (error) {
+    return (
+      <PageShell>
+        <div className="py-10">
+          <ErrorState message={error} />
+        </div>
+      </PageShell>
+    );
   }
 
   return (

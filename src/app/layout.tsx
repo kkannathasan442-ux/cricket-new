@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 
 import { APP_NAME, APP_TAGLINE } from "@/constants";
 import { Providers } from "@/providers/providers";
+import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -33,8 +35,6 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
 
@@ -53,6 +53,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <PwaInstallPrompt />
+          <ServiceWorkerRegister />
         </Providers>
       </body>
     </html>

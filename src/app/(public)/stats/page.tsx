@@ -1,15 +1,27 @@
 import { PageShell } from "@/components/common/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ErrorState } from "@/components/common/error-state";
 import { getGlobalStats } from "@/features/scoring/stats";
 
 export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
   let stats: Awaited<ReturnType<typeof getGlobalStats>> = { orangeCap: [], purpleCap: [], mvp: [] };
+  let error;
   try {
     stats = await getGlobalStats();
-  } catch {
-    stats = { orangeCap: [], purpleCap: [], mvp: [] };
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load stats.";
+  }
+
+  if (error) {
+    return (
+      <PageShell>
+        <div className="py-10">
+          <ErrorState message={error} />
+        </div>
+      </PageShell>
+    );
   }
 
   return (

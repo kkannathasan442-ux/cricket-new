@@ -27,7 +27,6 @@ export const DB = {
     teams: "teams",
     players: "players",
     innings: "innings",
-    overs: "overs",
     ballByBall: "ball_by_ball",
     battingScorecard: "batting_scorecard",
     bowlingScorecard: "bowling_scorecard",
@@ -160,17 +159,6 @@ export type ScoringActionType =
   | "wicket"
   | "end_innings"
   | "undo";
-
-/** A delivery that counts as a legal ball (advances over). */
-export const LEGAL_DELIVERIES: ScoringActionType[] = ["run", "wicket"];
-/** A delivery that does NOT count as a legal ball. */
-export const ILLEGAL_DELIVERIES: ScoringActionType[] = [
-  "wide",
-  "no_ball",
-  "bye",
-  "leg_bye",
-  "overthrow",
-];
 
 export interface ScoringPayload {
   /** Type of action the admin performed. */
@@ -314,12 +302,9 @@ export interface MatchScoringContext {
   battingTeam: TeamSummary | null;
   bowlingTeam: TeamSummary | null;
   striker: PlayerSummary | null;
-  nonStriker: PlayerSummary | null;
   bowler: PlayerSummary | null;
   recentBalls: BallEventRow[];
   playingXi: PlayingXiRow[];
-  requiresBowlerChange: boolean;
-  requiresNextBatsman: boolean;
   matchStarted: boolean;
 }
 

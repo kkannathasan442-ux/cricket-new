@@ -11,7 +11,6 @@ import {
   BALLS_PER_OVER,
   isOverComplete,
   nextBallPosition,
-  shouldRotateStrike,
 } from "@/features/scoring/rules";
 
 const LEGAL = new Set<ScoringActionType>(["run", "wicket"]);
@@ -292,7 +291,7 @@ export async function applyScoringEvent(
     const isBoundarySix = payload.action === "run" && batterRuns === 6;
     await applyBattingDelta(supabase, innings.id, payload.batsmanId, {
       runs: batterRuns + (extrasType === "leg_bye" || extrasType === "bye" ? 0 : extras),
-      balls: legal && payload.action !== "wicket" ? 1 : legal ? 1 : 0,
+      balls: legal ? 1 : 0,
       fours: isBoundaryFour ? 1 : 0,
       sixes: isBoundarySix ? 1 : 0,
       isOut: isWicket,
@@ -438,5 +437,3 @@ export async function undoLastBall(
 
   return { innings: updated as unknown as InningsRow };
 }
-
-export { shouldRotateStrike };

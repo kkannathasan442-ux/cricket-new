@@ -1,16 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import { DB } from "@/features/scoring";
-import type { BallEventRow } from "@/features/scoring";
-
-export interface CommentaryItem {
-  id: string;
-  over: number;
-  ball: number;
-  text: string;
-  isWicket: boolean;
-  runs: number;
-  extras: number;
-}
 
 export interface MatchCenterData {
   teamA: { id: string; name: string };
@@ -30,35 +19,36 @@ export interface MatchCenterData {
   striker: string | null;
   bowler: string | null;
   batting: {
-    playerName: string;
+    player_id: string;
+    player_name: string;
     runs: number;
-    balls: number;
+    balls_faced: number;
     fours: number;
     sixes: number;
-    dismissal: string;
+    is_out: boolean;
+    dismissal_type: string | null;
   }[];
   bowling: {
-    playerName: string;
+    player_id: string;
+    player_name: string;
     overs: number;
-    runs: number;
+    runs_conceded: number;
     wickets: number;
     wides: number;
-    noBalls: number;
+    no_balls: number;
   }[];
-  commentary: CommentaryItem[];
-}
-
-function dismissalLabel(b: BallEventRow): string {
-  if (!b.is_wicket) return "not out";
-  return b.dismissal_type ? b.dismissal_type.replace(/_/g, " ") : "out";
-}
-
-function ballText(b: BallEventRow): string {
-  if (b.is_wicket) return `WICKET! ${dismissalLabel(b)}.`;
-  if (b.extras > 0) return `${b.extras_type?.replace(/_/g, " ")} (${b.extras}).`;
-  if (b.runs === 4) return "FOUR!";
-  if (b.runs === 6) return "SIX!";
-  return `${b.runs} run${b.runs === 1 ? "" : "s"}.`;
+  commentary: {
+    id: string;
+    over_number: number;
+    ball_number: number;
+    runs: number;
+    extras: number;
+    extras_type: string | null;
+    is_wicket: boolean;
+    dismissal_type: string | null;
+    batsman_id: string | null;
+    bowler_id: string | null;
+  }[];
 }
 
 export interface MatchListItem {
@@ -119,7 +109,7 @@ export async function getMatchCenterData(
   let bowler: string | null = null;
   let batting: MatchCenterData["batting"] = [];
   let bowling: MatchCenterData["bowling"] = [];
-  let commentary: CommentaryItem[] = [];
+  let commentary: MatchCenterData["commentary"] = [];
 
   if (innings) {
     const battingTeamName =
@@ -133,18 +123,21 @@ export async function getMatchCenterData(
       .eq(DB.ball.inningsId, innings.id)
       .order(DB.ball.createdAt, { ascending: false })
       .limit(40);
-    const ballRows = (balls ?? []) as unknown as BallEventRow[];
+    const ballRows = (balls ?? []) as unknown as MatchCenterData["commentary"];
     commentary = ballRows
       .slice()
       .reverse()
       .map((b) => ({
         id: b.id,
-        over: b.over_number,
-        ball: b.ball_number,
-        text: ballText(b),
-        isWicket: b.is_wicket,
+        over_number: b.over_number,
+        ball_number: b.ball_number,
         runs: b.runs,
         extras: b.extras,
+        extras_type: b.extras_type,
+        is_wicket: b.is_wicket,
+        dismissal_type: b.dismissal_type,
+        batsman_id: b.batsman_id,
+        bowler_id: b.bowler_id,
       }));
 
     const last = ballRows[0];
@@ -165,6 +158,7 @@ export async function getMatchCenterData(
       .eq(DB.batting.inningsId, innings.id);
     batting = (bat ?? []).map((r) => {
       const row = r as unknown as {
+        player_id: string;
         runs: number;
         balls_faced: number;
         fours: number;
@@ -174,14 +168,14 @@ export async function getMatchCenterData(
         players?: { player_name: string } | null;
       };
       return {
-        playerName: row.players?.player_name ?? "Unknown",
+        player_id: row.player_id,
+        player_name: row.players?.player_name ?? "Unknown",
         runs: row.runs,
-        balls: row.balls_faced,
+        balls_faced: row.balls_faced,
         fours: row.fours,
         sixes: row.sixes,
-        dismissal: row.is_out
-          ? row.dismissal_type?.replace(/_/g, " ") ?? "out"
-          : "not out",
+        is_out: row.is_out,
+        dismissal_type: row.dismissal_type,
       };
     });
 
@@ -191,6 +185,7 @@ export async function getMatchCenterData(
       .eq(DB.bowling.inningsId, innings.id);
     bowling = (bowl ?? []).map((r) => {
       const row = r as unknown as {
+        player_id: string;
         overs: number;
         runs_conceded: number;
         wickets: number;
@@ -199,12 +194,13 @@ export async function getMatchCenterData(
         players?: { player_name: string } | null;
       };
       return {
-        playerName: row.players?.player_name ?? "Unknown",
+        player_id: row.player_id,
+        player_name: row.players?.player_name ?? "Unknown",
         overs: row.overs,
-        runs: row.runs_conceded,
+        runs_conceded: row.runs_conceded,
         wickets: row.wickets,
         wides: row.wides,
-        noBalls: row.no_balls,
+        no_balls: row.no_balls,
       };
     });
 

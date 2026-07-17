@@ -3,15 +3,10 @@ import { createServiceClient } from "@/lib/supabase/admin";
 /**
  * Transaction helper.
  *
- * Prefers a Postgres transaction via the Supabase RPC wrapper
- * `crickpulse_transaction` (to be created in the DB as a SECURITY DEFINER
- * function that runs the supplied JSON steps). When that RPC is unavailable
- * (e.g. local/dev without the function), it falls back to sequential writes
- * with best-effort rollback logging — sufficient for the foundation. The
- * scoring engine keeps each write idempotent where possible.
- *
- * This keeps the app production-ready: wrap an array of steps executed in
- * order inside one round-trip when the RPC exists.
+ * Production path: uses the `crickpulse_transaction` SECURITY DEFINER RPC
+ * when available. Fallback: sequential writes with best-effort rollback
+ * logging. The RPC must be created in the database as a Postgres function
+ * that executes the supplied JSON steps atomically.
  */
 type TxStep = {
   table: string;
@@ -20,17 +15,23 @@ type TxStep = {
   onConflict?: string;
 };
 
+let rpcAvailable: boolean | null = null;
+
+async function hasRpc(supabase: ReturnType<typeof createServiceClient>): Promise<boolean> {
+  if (rpcAvailable !== null) return rpcAvailable;
+  const { error } = await supabase.rpc("crickpulse_transaction", { steps: [] });
+  rpcAvailable = !error;
+  return rpcAvailable;
+}
+
 export async function runTransaction(steps: TxStep[]): Promise<void> {
   const supabase = createServiceClient();
 
-  // Attempt atomic transaction through RPC.
-  const { error: rpcError } = await supabase.rpc("crickpulse_transaction", {
-    steps,
-  });
+  if (await hasRpc(supabase)) {
+    const { error } = await supabase.rpc("crickpulse_transaction", { steps });
+    if (!error) return;
+  }
 
-  if (!rpcError) return;
-
-  // Fallback: execute sequentially (no cross-statement rollback in this path).
   for (const step of steps) {
     const query = supabase.from(step.table);
     let result;
