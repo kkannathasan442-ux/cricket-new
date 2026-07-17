@@ -8,6 +8,7 @@ export interface TournamentSummary {
   startDate: string | null;
   endDate: string | null;
   oversPerMatch: number;
+  playersPerTeam: number;
   teamCount: number;
 }
 
@@ -16,7 +17,7 @@ export async function listTournaments(): Promise<TournamentSummary[]> {
 
   const { data: tournaments, error } = await supabase
     .from(DB.TABLES.tournaments)
-    .select("id, tournament_name, status, start_date, end_date, overs_per_match")
+    .select("id, tournament_name, status, start_date, end_date, overs_per_match, players_per_team")
     .order("start_date", { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -44,6 +45,7 @@ export async function listTournaments(): Promise<TournamentSummary[]> {
       start_date: string | null;
       end_date: string | null;
       overs_per_match: number;
+      players_per_team: number;
     };
     return {
       id: row.id,
@@ -52,6 +54,7 @@ export async function listTournaments(): Promise<TournamentSummary[]> {
       startDate: row.start_date,
       endDate: row.end_date,
       oversPerMatch: row.overs_per_match,
+      playersPerTeam: row.players_per_team,
       teamCount: teamCountMap.get(row.id) ?? 0,
     };
   });

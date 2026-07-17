@@ -23,6 +23,7 @@ interface MatchStartWizardProps {
   teamBName: string;
   teamAPlayers: PlayerOpt[];
   teamBPlayers: PlayerOpt[];
+  playersPerTeam: number;
 }
 
 export function MatchStartWizard({
@@ -33,6 +34,7 @@ export function MatchStartWizard({
   teamBName,
   teamAPlayers,
   teamBPlayers,
+  playersPerTeam,
 }: MatchStartWizardProps) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
@@ -65,13 +67,13 @@ export function MatchStartWizard({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">
-          {name} — Playing XI ({selected.length}/11)
+          {name} — Playing XI ({selected.length}/{playersPerTeam})
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
         {players.map((p) => {
           const active = selected.includes(p.id);
-          const disabled = !active && selected.length >= 11;
+          const disabled = !active && selected.length >= playersPerTeam;
           return (
             <button
               key={p.id}
@@ -124,8 +126,8 @@ export function MatchStartWizard({
   async function submit() {
     setBusy(true);
     try {
-      if (xiA.length !== 11 || xiB.length !== 11) {
-        toast.error("Each team must have exactly 11 players selected.");
+      if (xiA.length !== playersPerTeam || xiB.length !== playersPerTeam) {
+        toast.error(`Each team must have exactly ${playersPerTeam} players selected.`);
         setBusy(false);
         return;
       }
@@ -299,7 +301,7 @@ export function MatchStartWizard({
         variant="neon"
         size="lg"
         className="w-full"
-        disabled={busy || xiA.length !== 11 || xiB.length !== 11}
+        disabled={busy || xiA.length !== playersPerTeam || xiB.length !== playersPerTeam}
         onClick={submit}
       >
         {busy ? <Loader2 className="size-5 animate-spin" /> : <Users className="size-4" />}

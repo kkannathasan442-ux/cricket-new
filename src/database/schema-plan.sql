@@ -48,4 +48,16 @@
 --   created_at timestamptz not null default now()
 -- );
 
+-- create table if not exists tournaments (
+--   id uuid primary key default gen_random_uuid(),
+--   tournament_name text not null,
+--   overs_per_match int not null default 20,
+--   max_teams int not null default 8,
+--   players_per_team int not null default 11,
+--   start_date date not null,
+--   end_date date not null,
+--   status text not null default 'upcoming',
+--   created_at timestamptz not null default now()
+-- );
+
 -- NOTE: Full DDL (with RLS policies, indexes, FKs, triggers) lands in Phase 2.

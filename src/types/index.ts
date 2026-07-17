@@ -81,6 +81,7 @@ export interface Tournament {
   tournament_name: string;
   overs_per_match: number;
   max_teams: number;
+  players_per_team: number;
   start_date: string;
   end_date: string;
   status: TournamentStatus;

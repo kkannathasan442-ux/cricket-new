@@ -11,12 +11,13 @@ export interface XiPlayer {
   team_id: string;
 }
 
-export function validateEleven(
+export function validateTeamSize(
   players: string[],
   label: string,
+  expectedSize: number,
 ): string | null {
-  if (players.length !== 11) {
-    return `${label} must have exactly 11 players (selected: ${players.length}).`;
+  if (players.length !== expectedSize) {
+    return `${label} must have exactly ${expectedSize} players (selected: ${players.length}).`;
   }
   return null;
 }
@@ -50,19 +51,9 @@ export function filterBattingOptions(
 export function filterBowlingOptions(
   allXiIds: string[],
   currentBowlerId: string | null,
-  inningsBalls: Map<string, number>,
-  excludeConsecutive: boolean,
 ): string[] {
   return allXiIds.filter((id) => {
     if (id === currentBowlerId) return false;
-    if (
-      excludeConsecutive &&
-      currentBowlerId &&
-      (inningsBalls.get(id) ?? 0) > 0 &&
-      (inningsBalls.get(currentBowlerId) ?? 0) > 0
-    ) {
-      return false;
-    }
     return true;
   });
 }

@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { createServiceClient } from "@/lib/supabase/admin";
 import { startMatch } from "@/features/scoring/playing-xi";
 import { getMatchScoringContext } from "@/features/scoring/service";
 import type { MatchStartConfig } from "@/features/scoring";
 import {
-  validateEleven,
+  validateTeamSize,
   validateOpenerInXi,
   assertPlayersInXi,
   buildXiMap,
@@ -54,15 +55,6 @@ export async function POST(
   const teamAPlayers = body.teamAPlayers as string[];
   const teamBPlayers = body.teamBPlayers as string[];
 
-  const elevenAErr = validateEleven(teamAPlayers, "Team A");
-  if (elevenAErr) {
-    return NextResponse.json({ error: elevenAErr }, { status: 400 });
-  }
-  const elevenBErr = validateEleven(teamBPlayers, "Team B");
-  if (elevenBErr) {
-    return NextResponse.json({ error: elevenBErr }, { status: 400 });
-  }
-
   try {
     const config: MatchStartConfig = {
       tossWinnerId: body.tossWinnerId as string,
@@ -72,6 +64,24 @@ export async function POST(
       openingBatsmen: body.openingBatsmen as MatchStartConfig["openingBatsmen"],
       openingBowlerId: body.openingBowlerId as string,
     };
+
+    const context = await getMatchScoringContext(matchId);
+    if (!context) {
+      return NextResponse.json({ error: "Match not found." }, { status: 404 });
+    }
+
+    const playersPerTeam = context.tournamentId
+      ? (await getTournamentPlayersPerTeam(context.tournamentId)) ?? 11
+      : 11;
+
+    const elevenAErr = validateTeamSize(teamAPlayers, "Team A", playersPerTeam);
+    if (elevenAErr) {
+      return NextResponse.json({ error: elevenAErr }, { status: 400 });
+    }
+    const elevenBErr = validateTeamSize(teamBPlayers, "Team B", playersPerTeam);
+    if (elevenBErr) {
+      return NextResponse.json({ error: elevenBErr }, { status: 400 });
+    }
 
     const xiMap = buildXiMap([
       ...teamAPlayers.map((pid) => ({ player_id: pid, team_id: body.teamAId as string })),
@@ -120,10 +130,21 @@ export async function POST(
       body.teamBId as string,
       config,
     );
-    const context = await getMatchScoringContext(matchId);
-    return NextResponse.json({ ok: true, context });
+    const updatedContext = await getMatchScoringContext(matchId);
+    return NextResponse.json({ ok: true, context: updatedContext });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to start match.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+async function getTournamentPlayersPerTeam(tournamentId: string): Promise<number | null> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("tournaments")
+    .select("players_per_team")
+    .eq("id", tournamentId)
+    .maybeSingle();
+  const row = data as { players_per_team: number } | null;
+  return row?.players_per_team ?? null;
 }

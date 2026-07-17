@@ -11,10 +11,12 @@ async function getTeamPlayers(matchId: string) {
   const supabase = createServiceClient();
   const ctx = await getMatchScoringContext(matchId);
   if (!ctx) return null;
+
   const { data } = await supabase
     .from("players")
     .select("id, player_name, role, team_id")
     .in("team_id", [ctx.teamA.id, ctx.teamB.id]);
+
   const map = (teamId: string) =>
     (data ?? [])
       .filter((p: { team_id: string }) => p.team_id === teamId)
@@ -23,10 +25,25 @@ async function getTeamPlayers(matchId: string) {
         playerName: p.player_name,
         role: p.role,
       }));
+
+  let playersPerTeam = 11;
+  if (ctx.tournamentId) {
+    const { data: tournament } = await supabase
+      .from("tournaments")
+      .select("players_per_team")
+      .eq("id", ctx.tournamentId)
+      .maybeSingle();
+    const row = tournament as { players_per_team: number } | null;
+    if (row?.players_per_team && row.players_per_team > 0) {
+      playersPerTeam = row.players_per_team;
+    }
+  }
+
   return {
     ctx,
     teamAPlayers: map(ctx.teamA.id),
     teamBPlayers: map(ctx.teamB.id),
+    playersPerTeam,
   };
 }
 
@@ -51,7 +68,7 @@ export default async function MatchStartPage({
     );
   }
 
-  const { ctx, teamAPlayers, teamBPlayers } = data;
+  const { ctx, teamAPlayers, teamBPlayers, playersPerTeam } = data;
 
   return (
     <PageShell withBottomNav={false} fluid className="md:py-6">
@@ -78,6 +95,7 @@ export default async function MatchStartPage({
           teamBName={ctx.teamB.teamName}
           teamAPlayers={teamAPlayers}
           teamBPlayers={teamBPlayers}
+          playersPerTeam={playersPerTeam}
         />
       </div>
     </PageShell>
