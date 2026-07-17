@@ -1,17 +1,44 @@
 import { PageShell } from "@/components/common/page-shell";
-import { EmptyState } from "@/components/common/empty-state";
-import { Trophy } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { listTournaments, type TournamentSummary } from "@/features/tournaments";
 
-export default function TournamentsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function TournamentsPage() {
+  let tournaments: TournamentSummary[] = [];
+  try {
+    tournaments = await listTournaments();
+  } catch {
+    tournaments = [];
+  }
+
   return (
     <PageShell>
       <div className="space-y-4">
         <h1 className="text-2xl font-black tracking-tight">Tournaments</h1>
-        <EmptyState
-          icon={Trophy}
-          title="No tournaments yet"
-          message="Tournament listings will appear here in Phase 2."
-        />
+        {tournaments.length === 0 ? (
+          <Card>
+            <CardContent className="py-10 text-center text-muted-foreground">
+              No tournaments yet. Check back later.
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {tournaments.map((t) => (
+              <Card key={t.id}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{t.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1 text-sm text-muted-foreground">
+                  <p>Status: {t.status}</p>
+                  <p>Teams: {t.teamCount}</p>
+                  <p>Overs: {t.oversPerMatch}</p>
+                  {t.startDate && <p>Starts: {new Date(t.startDate).toLocaleDateString()}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </PageShell>
   );

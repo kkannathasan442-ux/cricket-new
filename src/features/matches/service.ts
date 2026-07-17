@@ -61,6 +61,20 @@ function ballText(b: BallEventRow): string {
   return `${b.runs} run${b.runs === 1 ? "" : "s"}.`;
 }
 
+export interface MatchListItem {
+  id: string;
+  teamA: { id: string; name: string };
+  teamB: { id: string; name: string };
+  tournamentName: string | null;
+  status: string;
+  totalRuns: number | null;
+  totalWickets: number | null;
+  ballsBowled: number | null;
+  target: number | null;
+  inningsNumber: number | null;
+  matchDate: string | null;
+}
+
 export async function getMatchCenterData(
   matchId: string,
 ): Promise<MatchCenterData | null> {
@@ -227,5 +241,102 @@ export async function getMatchCenterData(
     batting: [],
     bowling: [],
     commentary: [],
+  };
+}
+
+export async function listMatches(): Promise<MatchListItem[]> {
+  const supabase = createServiceClient();
+
+  const { data: matches, error } = await supabase
+    .from(DB.TABLES.matches)
+    .select(
+      "id, team_a_id, team_b_id, status, match_date, tournaments(tournament_name)",
+    )
+    .order("match_date", { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error(error.message);
+
+  const { data: teams } = await supabase
+    .from(DB.TABLES.teams)
+    .select("id, team_name");
+
+  const teamMap = new Map((teams ?? []).map((t) => [t.id, t.team_name]));
+
+  const { data: inningsRows } = await supabase
+    .from(DB.TABLES.innings)
+    .select("match_id, total_runs, total_wickets, balls_bowled, target, innings_number")
+    .in(
+      "match_id",
+      (matches ?? []).map((m) => m.id),
+    );
+
+  const inningsMap = new Map(
+    (inningsRows ?? []).map((i) => [
+      i.match_id,
+      {
+        totalRuns: i.total_runs,
+        totalWickets: i.total_wickets,
+        ballsBowled: i.balls_bowled,
+        target: i.target,
+        inningsNumber: i.innings_number,
+      },
+    ]),
+  );
+
+  return (matches ?? []).map((m) => {
+    const mid = m as unknown as {
+      id: string;
+      team_a_id: string;
+      team_b_id: string;
+      status: string;
+      match_date: string | null;
+      tournaments?: { tournament_name: string | null } | null;
+    };
+    const inn = inningsMap.get(mid.id);
+    return {
+      id: mid.id,
+      teamA: { id: mid.team_a_id, name: teamMap.get(mid.team_a_id) ?? "Team A" },
+      teamB: { id: mid.team_b_id, name: teamMap.get(mid.team_b_id) ?? "Team B" },
+      tournamentName: mid.tournaments?.tournament_name ?? null,
+      status: mid.status,
+      totalRuns: inn?.totalRuns ?? null,
+      totalWickets: inn?.totalWickets ?? null,
+      ballsBowled: inn?.ballsBowled ?? null,
+      target: inn?.target ?? null,
+      inningsNumber: inn?.inningsNumber ?? null,
+      matchDate: mid.match_date,
+    };
+  });
+}
+
+export async function getAdminDashboardStats(): Promise<{
+  matches: number;
+  tournaments: number;
+  teams: number;
+  players: number;
+  liveMatches: number;
+}> {
+  const supabase = createServiceClient();
+
+  const [{ count: matchCount }, { count: tournamentCount }, { count: teamCount }, { count: playerCount }] =
+    await Promise.all([
+      supabase.from(DB.TABLES.matches).select("*", { count: "exact", head: true }),
+      supabase.from(DB.TABLES.tournaments).select("*", { count: "exact", head: true }),
+      supabase.from(DB.TABLES.teams).select("*", { count: "exact", head: true }),
+      supabase.from(DB.TABLES.players).select("*", { count: "exact", head: true }),
+    ]);
+
+  const { count: liveMatchCount } = await supabase
+    .from(DB.TABLES.matches)
+    .select("*", { count: "exact", head: true })
+    .eq("status", "live");
+
+  return {
+    matches: matchCount ?? 0,
+    tournaments: tournamentCount ?? 0,
+    teams: teamCount ?? 0,
+    players: playerCount ?? 0,
+    liveMatches: liveMatchCount ?? 0,
   };
 }

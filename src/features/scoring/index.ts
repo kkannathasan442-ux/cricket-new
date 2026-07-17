@@ -317,13 +317,9 @@ export interface MatchScoringContext {
   nonStriker: PlayerSummary | null;
   bowler: PlayerSummary | null;
   recentBalls: BallEventRow[];
-  /** Confirmed Playing XI rows for this match (restricts batter/bowler picks). */
   playingXi: PlayingXiRow[];
-  /** True when the just-completed over requires a bowler change. */
   requiresBowlerChange: boolean;
-  /** True when a wicket requires the next batsman selection. */
   requiresNextBatsman: boolean;
-  /** True once the Match Start Wizard has completed (toss + XI + openers). */
   matchStarted: boolean;
 }
 
@@ -332,44 +328,6 @@ export interface PlayerOption {
   id: string;
   playerName: string;
   role: string;
-}
-
-/** Raw `ball_by_ball` row shape (snake_case, matches existing DB schema). */
-export interface BallEventRow {
-  id: string;
-  innings_id: string;
-  over_number: number;
-  ball_number: number;
-  batsman_id: string;
-  bowler_id: string;
-  runs: number;
-  extras: number;
-  extras_type: string | null;
-  is_legal: boolean;
-  is_wicket: boolean;
-  dismissal_type: DismissalType | null;
-  created_at: string;
-}
-
-/** Raw `innings` row shape (snake_case, matches existing DB schema). */
-export interface InningsRow {
-  id: string;
-  match_id: string;
-  innings_number: 1 | 2;
-  batting_team_id: string;
-  bowling_team_id: string;
-  total_runs: number;
-  total_wickets: number;
-  overs_completed: number;
-  balls_bowled: number;
-  extras: number;
-  target: number | null;
-  is_completed: boolean;
-}
-
-export interface TeamSummary {
-  id: string;
-  teamName: string;
 }
 
 /** Raw `playing_xi` row (normalized match-team -> player selection). */

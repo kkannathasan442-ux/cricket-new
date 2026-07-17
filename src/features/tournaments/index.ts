@@ -1,4 +1,6 @@
 /**
  * Feature: Tournaments (BRD 6.3, 6.4).
- * Foundation only — tournament & scheduling pages built in Phase 2.
+ * Tournament listing, standings, and management pages.
  */
+
+export { listTournaments, type TournamentSummary } from "./service";
