@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getMatchScoringContext } from "@/features/scoring/service";
+import { requireRole } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireRole(["admin", "scorer", "viewer"]);
+  if (guard instanceof NextResponse) return guard;
+
   const { id } = await params;
   if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid match id." }, { status: 400 });

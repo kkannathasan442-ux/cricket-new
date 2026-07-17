@@ -1,16 +1,26 @@
-# Active Context: CrickPulse — Phase 5 Public Consumption
+# Active Context: CrickPulse — Phase 7 Authentication & Authorization
 
 ## Current State
 
 **Project**: CrickPulse — real-time cricket live scoring + tournament management platform (mobile-first, comparable to CricHeroes grassroots scoring).
 
-**Phase**: Phase 5 — Tournament Management & Public Consumption (in progress).
+**Phase**: Phase 7 — Authentication & Authorization (complete; verified typecheck/lint/build green).
 
 The codebase has a fully functional scoring engine (Phase 4) with match start wizard, playing XI selection, full cricket rules, scorecards, player stats, and points table. Phase 5 adds the public-facing and admin-facing data layers that make the platform consumable.
 
 ## Recently Completed
 
-- [x] Installed deps: @supabase/supabase-js, @supabase/ssr, framer-motion, next-themes, sonner, lucide-react, cva, clsx, tailwind-merge, tw-animate-css, Radix slot/dialog/dropdown/toast
+- [x] **Phase 7 Auth**: Email+password auth via Supabase, Next.js middleware route protection + role gating, API guards (requireUser/requireRole), 3 roles (admin/scorer/viewer)
+- [x] Replaced `src/proxy.ts` session-refresh stub with real `src/middleware.ts` (auth redirect + admin role gate + 401 on protected APIs)
+- [x] Auth helpers: `src/features/auth/guards.ts` (getServerUser/requireUser/requireRole), `src/features/auth/profile.ts` (getUserRole/ensureProfile), `src/features/auth/index.ts` (routes + role permissions)
+- [x] Protected API routes: players, teams, tournaments (GET all roles, writes admin/scorer), match start/score (admin/scorer), scoreboard (all), upload (admin/scorer)
+- [x] Login page wired with signInWithPassword + friendly error handling + redirect param
+- [x] Register page wired with signUp + profile creation
+- [x] Profile page (server component): name, email, role badge, sign-out button
+- [x] Logout route `src/app/auth/logout/route.ts` (server signOut + cookie clear + redirect)
+- [x] Sidebar "Sign out" links to /auth/logout; admin layout adds server-side defense-in-depth role check
+- [x] DB migration `src/database/auth-profiles.sql`: profiles table, RLS, new-user trigger → default role 'viewer'
+- [x] UserRole type updated to "admin" | "scorer" | "viewer"
 - [x] Tailwind v4 dark/neon theme tokens in globals.css
 - [x] ShadCN setup (components.json + ui/: button, card, badge, skeleton, sheet, container, sonner; barrel index.ts)
 - [x] Supabase clients: browser (client.ts), server (server.ts w/ cookies), admin/service-role (admin.ts), proxy/session refresh (middleware.ts), env validation (env.ts)
@@ -51,17 +61,16 @@ The codebase has a fully functional scoring engine (Phase 4) with match start wi
 
 ## Current Focus
 
-Public consumption layer is complete. The app now has real server-rendered public pages and an admin dashboard with live counts. Awaiting Phase 6: Team/Player/Tournament CRUD pages, match creation/scheduling, and auth integration.
+Phase 7 complete. Auth (Supabase email/password), middleware-based route protection, role-based access (admin/scorer/viewer), and API guards are all in place. All protected routes return 401/403 appropriately.
 
 ## Important Notes
 
-- Build uses system fonts (no Google Fonts fetch) because sandbox has no network. If fonts needed later, self-host or enable TLS certs.
-- Next 16 uses `src/proxy.ts` (not middleware.ts) for session refresh — convention renamed.
-- Supabase env vars fall back to "" in dev for type-safety; production now warns (no throw at import) so dynamic route build/collection succeeds.
-- `007_live_scoring.sql` still NOT present. `DB` mapping in `src/features/scoring/index.ts` is the assumed contract. Reconcile before connecting a live DB.
-- `crickpulse_transaction` RPC must be created in DB for true atomic transactions (falls back to sequential writes otherwise).
-- `players` table has no team linkage, so modals list all players (filter by playing-XI when available).
-- Fixed duplicate type declarations in `src/features/scoring/index.ts` (BallEventRow, InningsRow, TeamSummary were declared twice).
+- Next.js middleware is now `src/middleware.ts` (the prior `src/proxy.ts` / `src/lib/supabase/middleware.ts` were removed — the session-refresh logic lives in `src/middleware.ts`).
+- Roles are stored in `public.profiles.role`; resolved server-side via the service-role client (`getUserRole`). New users default to `viewer` via the `on_auth_user_created` trigger.
+- API services still use the service-role client for DB writes, so RLS does not gate them — authorization is enforced at the API route level via `requireRole`. This is intentional per the existing architecture.
+- Scoring engine untouched (no schema changes to scoring tables).
+- Supabase env vars fall back to "" in dev; production warns if missing. The "Missing NEXT_PUBLIC_SUPABASE_URL" build warning is expected in the sandbox.
+- The `007_live_scoring.sql` + `auth-profiles.sql` migrations still need to be applied to a real Supabase project.
 
 ## Session History
 
@@ -71,3 +80,4 @@ Public consumption layer is complete. The app now has real server-rendered publi
 | 2026-07-17 | Scoring MVP: admin score page, ScoreControls, scoring API, feature module w/ existing-table mapping |
 | 2026-07-17 | Phase 4: full cricket rules engine, scorecards, player stats, points table, realtime public scoreboard |
 | 2026-07-17 | Phase 5: fixed duplicate types, public match/tournament/stats pages with real data, admin dashboard with live counts, API routes |
+| 2026-07-17 | Phase 7: Supabase email/password auth, middleware route protection + role gating, API guards (401/403), login/register/profile pages, logout route, profiles table migration |

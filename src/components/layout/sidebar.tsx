@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   LayoutDashboard,
   LogOut,
   Settings,
@@ -16,10 +15,9 @@ import { cn } from "@/lib/utils";
 
 const ADMIN_LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/matches", label: "Matches", icon: Activity },
-  { href: "/admin/tournaments", label: "Tournaments", icon: Trophy },
-  { href: "/admin/teams", label: "Teams", icon: Users },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/players", label: "Players", icon: Users },
+  { href: "/admin/teams", label: "Teams", icon: Trophy },
+  { href: "/admin/tournaments", label: "Tournaments", icon: Settings },
 ];
 
 /**
@@ -59,13 +57,13 @@ export function Sidebar() {
           })}
         </ul>
         <div className="mt-6 border-t border-border/60 pt-4">
-          <button
-            type="button"
+          <Link
+            href="/auth/logout"
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <LogOut className="size-4" />
             Sign out
-          </button>
+          </Link>
         </div>
       </nav>
     </aside>

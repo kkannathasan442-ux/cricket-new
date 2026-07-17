@@ -61,8 +61,11 @@ export const BOTTOM_NAV_ITEMS = [
   { key: "profile", label: "Profile", href: "/profile", icon: "User" },
 ] as const;
 
-/** Routes that require an authenticated admin session. */
+/** Routes that require an authenticated session. */
 export const ADMIN_ROUTES = ["/admin"] as const;
+
+/** Platform user roles (Phase 7 auth). */
+export const USER_ROLES = ["admin", "scorer", "viewer"] as const;
 
 /** Storage buckets used by the platform. */
 export const STORAGE_BUCKETS = {

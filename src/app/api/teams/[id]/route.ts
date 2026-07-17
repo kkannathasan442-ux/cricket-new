@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getTeam, updateTeam, deleteTeam, listTeams } from "@/features/teams/service";
+import { requireRole } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,9 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireRole(["admin", "scorer", "viewer"]);
+  if (guard instanceof NextResponse) return guard;
+
   const { id } = await params;
   if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid team id." }, { status: 400 });
@@ -29,6 +33,9 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireRole(["admin", "scorer"]);
+  if (guard instanceof NextResponse) return guard;
+
   const { id } = await params;
   if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid team id." }, { status: 400 });
@@ -64,6 +71,9 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireRole(["admin", "scorer"]);
+  if (guard instanceof NextResponse) return guard;
+
   const { id } = await params;
   if (!isUuid(id)) {
     return NextResponse.json({ error: "Invalid team id." }, { status: 400 });

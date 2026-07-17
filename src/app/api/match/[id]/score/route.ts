@@ -8,6 +8,7 @@ import {
   type ScoringPayload,
 } from "@/features/scoring";
 import { assertPlayersInXi } from "@/features/scoring/validation";
+import { requireRole } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireRole(["admin", "scorer"]);
+  if (guard instanceof NextResponse) return guard;
+
   const { id: matchId } = await params;
 
   if (!isUuid(matchId)) {

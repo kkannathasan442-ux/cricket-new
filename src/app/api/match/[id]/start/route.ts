@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { startMatch } from "@/features/scoring/playing-xi";
 import { getMatchScoringContext } from "@/features/scoring/service";
 import type { MatchStartConfig } from "@/features/scoring";
+import { requireRole } from "@/features/auth/guards";
 import {
   validateTeamSize,
   validateOpenerInXi,
@@ -23,6 +24,9 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const guard = await requireRole(["admin", "scorer"]);
+  if (guard instanceof NextResponse) return guard;
+
   const { id: matchId } = await params;
   if (!isUuid(matchId)) {
     return NextResponse.json({ error: "Invalid match id." }, { status: 400 });

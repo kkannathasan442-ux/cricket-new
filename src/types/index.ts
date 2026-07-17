@@ -15,7 +15,7 @@
 export type PlayerRole = "batsman" | "bowler" | "all-rounder" | "wicket-keeper";
 
 /** Roles within the CrickPulse platform. */
-export type UserRole = "admin" | "public";
+export type UserRole = "admin" | "scorer" | "viewer";
 
 /** Lifecycle state of a tournament. */
 export type TournamentStatus = "upcoming" | "ongoing" | "completed" | "archived";

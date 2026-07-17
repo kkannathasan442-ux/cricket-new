@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { listTeams, createTeam } from "@/features/teams/service";
+import { requireRole } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const guard = await requireRole(["admin", "scorer", "viewer"]);
+  if (guard instanceof NextResponse) return guard;
+
   try {
     const teams = await listTeams();
     return NextResponse.json(teams);
@@ -14,6 +18,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const guard = await requireRole(["admin", "scorer"]);
+  if (guard instanceof NextResponse) return guard;
+
   try {
     const body = await request.json();
     const required = ["team_name", "owner_name"];

@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 
 import { createServiceClient } from "@/lib/supabase/admin";
 import { STORAGE_BUCKETS } from "@/constants";
+import { requireRole } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const guard = await requireRole(["admin", "scorer"]);
+  if (guard instanceof NextResponse) return guard;
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
