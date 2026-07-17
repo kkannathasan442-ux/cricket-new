@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 
 import { applyScoringEvent, undoLastBall } from "@/features/scoring/engine";
 import { endInnings } from "@/features/scoring/innings";
+import { getPlayingXi } from "@/features/scoring/playing-xi";
 import {
   type ScoringActionType,
   type ScoringPayload,
 } from "@/features/scoring";
+import { assertPlayersInXi } from "@/features/scoring/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -86,14 +88,40 @@ export async function POST(
       );
     }
 
+    const xi = await getPlayingXi(matchId);
+    const xiIds = new Set(xi.map((row) => row.player_id));
+
+    const batsmanId = body.batsmanId as string | undefined;
+    const bowlerId = body.bowlerId as string | undefined;
+    const nextBatsmanId = body.nextBatsmanId as string | undefined;
+
+    if (batsmanId && !xiIds.has(batsmanId)) {
+      return NextResponse.json(
+        { error: "Batsman is not in the Playing XI." },
+        { status: 400 },
+      );
+    }
+    if (bowlerId && !xiIds.has(bowlerId)) {
+      return NextResponse.json(
+        { error: "Bowler is not in the Playing XI." },
+        { status: 400 },
+      );
+    }
+    if (nextBatsmanId && !xiIds.has(nextBatsmanId)) {
+      return NextResponse.json(
+        { error: "Next batsman is not in the Playing XI." },
+        { status: 400 },
+      );
+    }
+
     const payload: ScoringPayload = {
       action,
       runs: body.runs,
-      batsmanId: body.batsmanId,
+      batsmanId,
       nonStrikerId: body.nonStrikerId,
-      bowlerId: body.bowlerId,
+      bowlerId,
       dismissalType: body.dismissalType,
-      nextBatsmanId: body.nextBatsmanId,
+      nextBatsmanId,
       nextBowlerId: body.nextBowlerId,
     };
 

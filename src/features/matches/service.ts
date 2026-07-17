@@ -152,57 +152,69 @@ export async function getMatchCenterData(
         players?.find((p) => p.id === last.bowler_id)?.player_name ?? null;
     }
 
+    const { data: xiForMatch } = await supabase
+      .from(DB.TABLES.playingXi)
+      .select("player_id")
+      .eq(DB.playingXi.matchId, matchId);
+    const xiPlayerIds = new Set(
+      (xiForMatch ?? []).map((row) => (row as unknown as { player_id: string }).player_id),
+    );
+
     const { data: bat } = await supabase
       .from(DB.TABLES.battingScorecard)
       .select("*, players(player_name)")
       .eq(DB.batting.inningsId, innings.id);
-    batting = (bat ?? []).map((r) => {
-      const row = r as unknown as {
-        player_id: string;
-        runs: number;
-        balls_faced: number;
-        fours: number;
-        sixes: number;
-        is_out: boolean;
-        dismissal_type: string | null;
-        players?: { player_name: string } | null;
-      };
-      return {
-        player_id: row.player_id,
-        player_name: row.players?.player_name ?? "Unknown",
-        runs: row.runs,
-        balls_faced: row.balls_faced,
-        fours: row.fours,
-        sixes: row.sixes,
-        is_out: row.is_out,
-        dismissal_type: row.dismissal_type,
-      };
-    });
+    batting = (bat ?? [])
+      .map((r) => {
+        const row = r as unknown as {
+          player_id: string;
+          runs: number;
+          balls_faced: number;
+          fours: number;
+          sixes: number;
+          is_out: boolean;
+          dismissal_type: string | null;
+          players?: { player_name: string } | null;
+        };
+        return {
+          player_id: row.player_id,
+          player_name: row.players?.player_name ?? "Unknown",
+          runs: row.runs,
+          balls_faced: row.balls_faced,
+          fours: row.fours,
+          sixes: row.sixes,
+          is_out: row.is_out,
+          dismissal_type: row.dismissal_type,
+        };
+      })
+      .filter((row) => xiPlayerIds.size === 0 || xiPlayerIds.has(row.player_id));
 
     const { data: bowl } = await supabase
       .from(DB.TABLES.bowlingScorecard)
       .select("*, players(player_name)")
       .eq(DB.bowling.inningsId, innings.id);
-    bowling = (bowl ?? []).map((r) => {
-      const row = r as unknown as {
-        player_id: string;
-        overs: number;
-        runs_conceded: number;
-        wickets: number;
-        wides: number;
-        no_balls: number;
-        players?: { player_name: string } | null;
-      };
-      return {
-        player_id: row.player_id,
-        player_name: row.players?.player_name ?? "Unknown",
-        overs: row.overs,
-        runs_conceded: row.runs_conceded,
-        wickets: row.wickets,
-        wides: row.wides,
-        no_balls: row.no_balls,
-      };
-    });
+    bowling = (bowl ?? [])
+      .map((r) => {
+        const row = r as unknown as {
+          player_id: string;
+          overs: number;
+          runs_conceded: number;
+          wickets: number;
+          wides: number;
+          no_balls: number;
+          players?: { player_name: string } | null;
+        };
+        return {
+          player_id: row.player_id,
+          player_name: row.players?.player_name ?? "Unknown",
+          overs: row.overs,
+          runs_conceded: row.runs_conceded,
+          wickets: row.wickets,
+          wides: row.wides,
+          no_balls: row.no_balls,
+        };
+      })
+      .filter((row) => xiPlayerIds.size === 0 || xiPlayerIds.has(row.player_id));
 
     return {
       teamA,

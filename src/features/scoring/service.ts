@@ -79,8 +79,10 @@ export async function getMatchScoringContext(
   let battingTeam: TeamSummary | null = null;
   let bowlingTeam: TeamSummary | null = null;
   let striker: MatchScoringContext["striker"] = null;
+  let nonStriker: MatchScoringContext["nonStriker"] = null;
   let bowler: MatchScoringContext["bowler"] = null;
   let recentBalls: BallEventRow[] = [];
+  let dismissedPlayerIds: string[] = [];
 
   if (innings) {
     battingTeam = toSummary(innings.batting_team_id, "Batting");
@@ -115,9 +117,27 @@ export async function getMatchScoringContext(
       striker = find(last.batsman_id);
       bowler = find(last.bowler_id);
 
+      // Non-striker: if there was a previous ball, the other batsman is the non-striker.
+      if (recentBalls.length > 1) {
+        const prev = recentBalls[1];
+        const prevBatsmanId = prev.batsman_id;
+        if (prevBatsmanId && prevBatsmanId !== last.batsman_id) {
+          nonStriker = find(prevBatsmanId);
+        }
+      }
+
       // Until the next ball is recorded we cannot know the new striker;
       // the UI prompts for the next batsman when the last ball was a wicket.
     }
+
+    const { data: dismissed } = await supabase
+      .from(DB.TABLES.battingScorecard)
+      .select("player_id")
+      .eq(DB.batting.inningsId, innings.id)
+      .eq(DB.batting.isOut, true);
+    dismissedPlayerIds = (dismissed ?? []).map(
+      (r) => (r as unknown as { player_id: string }).player_id,
+    );
   }
 
   // Playing XI for this match (restricts batter/bowler selection).
@@ -140,9 +160,11 @@ export async function getMatchScoringContext(
     battingTeam,
     bowlingTeam,
     striker,
+    nonStriker,
     bowler,
     recentBalls: [...recentBalls].reverse(),
     playingXi,
+    dismissedPlayerIds,
     matchStarted,
   };
 }
@@ -156,6 +178,10 @@ export async function getMatchScoringContext(
  */
 export async function getInningsPlayers(
   matchId: string,
+  options?: {
+    excludeBatting?: string[];
+    excludeBowling?: string[];
+  },
 ): Promise<{ batting: PlayerOption[]; bowling: PlayerOption[] }> {
   const supabase = createServiceClient();
   const innings = await resolveInnings(supabase, matchId);
@@ -180,8 +206,11 @@ export async function getInningsPlayers(
     role: p.role,
   }));
 
+  const excludeBatting = new Set(options?.excludeBatting ?? []);
+  const excludeBowling = new Set(options?.excludeBowling ?? []);
+
   return {
-    batting: all,
-    bowling: all.filter((p) => p.role !== "batsman"),
+    batting: all.filter((p) => !excludeBatting.has(p.id)),
+    bowling: all.filter((p) => !excludeBowling.has(p.id) && p.role !== "batsman"),
   };
 }

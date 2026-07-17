@@ -302,9 +302,11 @@ export interface MatchScoringContext {
   battingTeam: TeamSummary | null;
   bowlingTeam: TeamSummary | null;
   striker: PlayerSummary | null;
+  nonStriker: PlayerSummary | null;
   bowler: PlayerSummary | null;
   recentBalls: BallEventRow[];
   playingXi: PlayingXiRow[];
+  dismissedPlayerIds: string[];
   matchStarted: boolean;
 }
 

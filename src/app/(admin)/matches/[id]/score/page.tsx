@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/common";
 import { ScoreControls } from "@/components/admin/scoring/ScoreControls";
 import { getMatchScoringContext, getInningsPlayers } from "@/features/scoring/service";
+import type { PlayerOption } from "@/features/scoring";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,23 @@ export default async function MatchScorePage({
 }) {
   const { id } = await params;
   const context = await getMatchScoringContext(id);
-  const players = context ? await getInningsPlayers(id) : { batting: [], bowling: [] };
+
+  let players: { batting: PlayerOption[]; bowling: PlayerOption[] } = {
+    batting: [],
+    bowling: [],
+  };
+  if (context) {
+    const excludeBatting = [
+      context.striker?.id,
+      context.nonStriker?.id,
+      ...context.dismissedPlayerIds,
+    ].filter(Boolean) as string[];
+    const excludeBowling = [context.bowler?.id].filter(Boolean) as string[];
+    players = await getInningsPlayers(id, {
+      excludeBatting,
+      excludeBowling,
+    });
+  }
 
   if (!context) {
     return (

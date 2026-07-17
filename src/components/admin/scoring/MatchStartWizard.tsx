@@ -25,10 +25,6 @@ interface MatchStartWizardProps {
   teamBPlayers: PlayerOpt[];
 }
 
-/**
- * Match Start Wizard (Phase 5): toss winner, bat/bowl decision, Playing XI
- * selection per team, opening batsmen, opening bowler. Posts to the start API.
- */
 export function MatchStartWizard({
   matchId,
   teamAId,
@@ -69,25 +65,30 @@ export function MatchStartWizard({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">
-          {name} — Playing XI ({selected.length})
+          {name} — Playing XI ({selected.length}/11)
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
-        {players.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => onToggle(p.id)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-sm transition-colors",
-              selected.includes(p.id)
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border hover:bg-accent",
-            )}
-          >
-            {p.playerName}
-          </button>
-        ))}
+        {players.map((p) => {
+          const active = selected.includes(p.id);
+          const disabled = !active && selected.length >= 11;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onToggle(p.id)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-sm transition-colors",
+                active
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border hover:bg-accent disabled:opacity-40",
+              )}
+            >
+              {p.playerName}
+            </button>
+          );
+        })}
         {players.length === 0 && (
           <span className="text-sm text-muted-foreground">No players</span>
         )}
@@ -96,12 +97,64 @@ export function MatchStartWizard({
   );
 
   const openingA = tossWinner === "A" ? decision : decision === "bat" ? "bowl" : "bat";
-  // The team that bats first:
   const battingTeam = openingA === "bat" ? "A" : "B";
+
+  const battingXi =
+    battingTeam === "A"
+      ? xiA
+      : xiB;
+  const bowlingXi =
+    battingTeam === "A"
+      ? xiB
+      : xiA;
+
+  const battingPlayers =
+    battingTeam === "A"
+      ? teamAPlayers
+      : teamBPlayers;
+  const bowlingPlayers =
+    battingTeam === "A"
+      ? teamBPlayers
+      : teamAPlayers;
+
+  const strikerOptions = battingPlayers.filter((p) => battingXi.includes(p.id));
+  const nonStrikerOptions = battingPlayers.filter((p) => battingXi.includes(p.id) && p.id !== strikerA && p.id !== strikerB);
+  const bowlerOptions = bowlingPlayers.filter((p) => bowlingXi.includes(p.id));
 
   async function submit() {
     setBusy(true);
     try {
+      if (xiA.length !== 11 || xiB.length !== 11) {
+        toast.error("Each team must have exactly 11 players selected.");
+        setBusy(false);
+        return;
+      }
+
+      const currentStriker = battingTeam === "A" ? strikerA : strikerB;
+      const currentNonStriker = battingTeam === "A" ? nonStrikerA : nonStrikerB;
+
+      if (!currentStriker || !currentNonStriker || !bowler) {
+        toast.error("Please select both opening batters and the opening bowler.");
+        setBusy(false);
+        return;
+      }
+
+      if (!battingXi.includes(currentStriker)) {
+        toast.error("Striker must be in the batting team's Playing XI.");
+        setBusy(false);
+        return;
+      }
+      if (!battingXi.includes(currentNonStriker)) {
+        toast.error("Non-striker must be in the batting team's Playing XI.");
+        setBusy(false);
+        return;
+      }
+      if (!bowlingXi.includes(bowler)) {
+        toast.error("Opening bowler must be in the bowling team's Playing XI.");
+        setBusy(false);
+        return;
+      }
+
       const res = await fetch(`/api/match/${matchId}/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -114,8 +167,8 @@ export function MatchStartWizard({
           teamBPlayers: xiB,
           openingBatsmen: {
             teamId: battingTeam === "A" ? teamAId : teamBId,
-            strikerId: battingTeam === "A" ? strikerA : strikerB,
-            nonStrikerId: battingTeam === "A" ? nonStrikerA : nonStrikerB,
+            strikerId: currentStriker,
+            nonStrikerId: currentNonStriker,
           },
           openingBowlerId: bowler,
         }),
@@ -198,7 +251,7 @@ export function MatchStartWizard({
               }
             >
               <option value="">Select</option>
-              {(battingTeam === "A" ? teamAPlayers : teamBPlayers).map((p) => (
+              {strikerOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.playerName}
                 </option>
@@ -217,7 +270,7 @@ export function MatchStartWizard({
               }
             >
               <option value="">Select</option>
-              {(battingTeam === "A" ? teamAPlayers : teamBPlayers).map((p) => (
+              {nonStrikerOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.playerName}
                 </option>
@@ -232,7 +285,7 @@ export function MatchStartWizard({
               onChange={(e) => setBowler(e.target.value)}
             >
               <option value="">Select</option>
-              {(battingTeam === "A" ? teamBPlayers : teamAPlayers).map((p) => (
+              {bowlerOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.playerName}
                 </option>
@@ -246,7 +299,7 @@ export function MatchStartWizard({
         variant="neon"
         size="lg"
         className="w-full"
-        disabled={busy || xiA.length < 1 || xiB.length < 1}
+        disabled={busy || xiA.length !== 11 || xiB.length !== 11}
         onClick={submit}
       >
         {busy ? <Loader2 className="size-5 animate-spin" /> : <Users className="size-4" />}

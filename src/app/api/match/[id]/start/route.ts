@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import { startMatch } from "@/features/scoring/playing-xi";
 import { getMatchScoringContext } from "@/features/scoring/service";
 import type { MatchStartConfig } from "@/features/scoring";
+import {
+  validateEleven,
+  validateOpenerInXi,
+  assertPlayersInXi,
+  buildXiMap,
+} from "@/features/scoring/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -12,10 +18,6 @@ function isUuid(value: string): boolean {
   );
 }
 
-/**
- * POST /api/match/[id]/start
- * Applies the Match Start Wizard (toss, Playing XI, openers).
- */
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -49,27 +51,69 @@ export async function POST(
     );
   }
 
-  if (
-    !Array.isArray(body.teamAPlayers) ||
-    body.teamAPlayers.length < 1 ||
-    !Array.isArray(body.teamBPlayers) ||
-    body.teamBPlayers.length < 1
-  ) {
-    return NextResponse.json(
-      { error: "Each team needs at least one Playing XI player." },
-      { status: 400 },
-    );
+  const teamAPlayers = body.teamAPlayers as string[];
+  const teamBPlayers = body.teamBPlayers as string[];
+
+  const elevenAErr = validateEleven(teamAPlayers, "Team A");
+  if (elevenAErr) {
+    return NextResponse.json({ error: elevenAErr }, { status: 400 });
+  }
+  const elevenBErr = validateEleven(teamBPlayers, "Team B");
+  if (elevenBErr) {
+    return NextResponse.json({ error: elevenBErr }, { status: 400 });
   }
 
   try {
     const config: MatchStartConfig = {
       tossWinnerId: body.tossWinnerId as string,
       tossDecision: body.tossDecision as "bat" | "bowl",
-      teamAPlayers: body.teamAPlayers as string[],
-      teamBPlayers: body.teamBPlayers as string[],
+      teamAPlayers,
+      teamBPlayers,
       openingBatsmen: body.openingBatsmen as MatchStartConfig["openingBatsmen"],
       openingBowlerId: body.openingBowlerId as string,
     };
+
+    const xiMap = buildXiMap([
+      ...teamAPlayers.map((pid) => ({ player_id: pid, team_id: body.teamAId as string })),
+      ...teamBPlayers.map((pid) => ({ player_id: pid, team_id: body.teamBId as string })),
+    ]);
+
+    const xiA = xiMap.get(body.teamAId as string) ?? new Set<string>();
+    const xiB = xiMap.get(body.teamBId as string) ?? new Set<string>();
+
+    const battingTeamId = config.openingBatsmen.teamId;
+    const bowlingTeamId =
+      battingTeamId === body.teamAId ? (body.teamBId as string) : (body.teamAId as string);
+    const battingXi = battingTeamId === body.teamAId ? xiA : xiB;
+    const bowlingXi = bowlingTeamId === body.teamAId ? xiA : xiB;
+
+    const strikerErr = validateOpenerInXi(
+      config.openingBatsmen.strikerId,
+      Array.from(battingXi),
+      "Opening striker",
+    );
+    if (strikerErr) {
+      return NextResponse.json({ error: strikerErr }, { status: 400 });
+    }
+
+    const nonStrikerErr = validateOpenerInXi(
+      config.openingBatsmen.nonStrikerId,
+      Array.from(battingXi),
+      "Opening non-striker",
+    );
+    if (nonStrikerErr) {
+      return NextResponse.json({ error: nonStrikerErr }, { status: 400 });
+    }
+
+    const bowlerErr = validateOpenerInXi(
+      config.openingBowlerId,
+      Array.from(bowlingXi),
+      "Opening bowler",
+    );
+    if (bowlerErr) {
+      return NextResponse.json({ error: bowlerErr }, { status: 400 });
+    }
+
     await startMatch(
       matchId,
       body.teamAId as string,
