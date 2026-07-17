@@ -17,6 +17,21 @@ export const metadata: Metadata = {
   description: APP_TAGLINE,
   applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: APP_NAME,
+    title: `${APP_NAME} — ${APP_TAGLINE}`,
+    description: APP_TAGLINE,
+    url: siteUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${APP_NAME} — ${APP_TAGLINE}`,
+    description: APP_TAGLINE,
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -25,6 +40,10 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
     apple: "/icons/icon-192.png",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

@@ -70,7 +70,11 @@ Phase 7 complete. Auth (Supabase email/password), middleware-based route protect
 - API services still use the service-role client for DB writes, so RLS does not gate them — authorization is enforced at the API route level via `requireRole`. This is intentional per the existing architecture.
 - Scoring engine untouched (no schema changes to scoring tables).
 - Supabase env vars fall back to "" in dev; production warns if missing. The "Missing NEXT_PUBLIC_SUPABASE_URL" build warning is expected in the sandbox.
-- The `007_live_scoring.sql` + `auth-profiles.sql` migrations still need to be applied to a real Supabase project.
+- Phase 8 production hardening complete: full core schema DDL + transaction RPC + sitemap/robots + valid PWA icons + error-monitoring integration point + hardened uploads + OG metadata.
+
+## Current Focus
+
+Phase 8 complete. Production readiness: DB migrations generated for every table the app uses, SEO/sitemap/robots in place, PWA icons valid, security headers + upload validation hardened, error-monitoring hook prepared.
 
 ## Session History
 
@@ -81,3 +85,4 @@ Phase 7 complete. Auth (Supabase email/password), middleware-based route protect
 | 2026-07-17 | Phase 4: full cricket rules engine, scorecards, player stats, points table, realtime public scoreboard |
 | 2026-07-17 | Phase 5: fixed duplicate types, public match/tournament/stats pages with real data, admin dashboard with live counts, API routes |
 | 2026-07-17 | Phase 7: Supabase email/password auth, middleware route protection + role gating, API guards (401/403), login/register/profile pages, logout route, profiles table migration |
+| 2026-07-17 | Phase 8: generated core schema DDL (14 tables) + transaction RPC, sitemap/robots, valid PWA icons, Sentry/Logtail instrumentation hook, hardened uploads, OG metadata; typecheck/lint/build green |

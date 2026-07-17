@@ -6,6 +6,14 @@ import { requireRole } from "@/features/auth/guards";
 
 export const dynamic = "force-dynamic";
 
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
 export async function POST(request: Request) {
   const guard = await requireRole(["admin", "scorer"]);
   if (guard instanceof NextResponse) return guard;
@@ -22,6 +30,22 @@ export async function POST(request: Request) {
     const allowedBuckets = Object.values(STORAGE_BUCKETS) as readonly string[];
     if (!allowedBuckets.includes(bucket)) {
       return NextResponse.json({ error: "Invalid bucket." }, { status: 400 });
+    }
+
+    if (file.size === 0) {
+      return NextResponse.json({ error: "Empty file." }, { status: 400 });
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: "File exceeds the 5 MB size limit." },
+        { status: 413 },
+      );
+    }
+    if (!ALLOWED_TYPES.has(file.type)) {
+      return NextResponse.json(
+        { error: "Unsupported file type. Use PNG, JPEG, WebP, or GIF." },
+        { status: 415 },
+      );
     }
 
     const supabase = createServiceClient();
