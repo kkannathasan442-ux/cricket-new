@@ -1,4 +1,13 @@
 /**
  * Feature: Teams (BRD 6.1).
- * Foundation only — CRUD pages built in Phase 2.
  */
+
+export {
+  listTeams,
+  getTeam,
+  createTeam,
+  updateTeam,
+  deleteTeam,
+  type Team,
+  type TeamInput,
+} from "./service";

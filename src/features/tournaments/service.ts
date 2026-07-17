@@ -12,6 +12,28 @@ export interface TournamentSummary {
   teamCount: number;
 }
 
+export interface Tournament {
+  id: string;
+  tournament_name: string;
+  overs_per_match: number;
+  max_teams: number;
+  players_per_team: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+  created_at: string;
+}
+
+export interface TournamentInput {
+  tournament_name: string;
+  overs_per_match: number;
+  max_teams: number;
+  players_per_team: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+}
+
 export async function listTournaments(): Promise<TournamentSummary[]> {
   const supabase = createServiceClient();
 
@@ -58,4 +80,51 @@ export async function listTournaments(): Promise<TournamentSummary[]> {
       teamCount: teamCountMap.get(row.id) ?? 0,
     };
   });
+}
+
+export async function getTournament(id: string): Promise<Tournament | null> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from(DB.TABLES.tournaments)
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return (data as unknown as Tournament | null) ?? null;
+}
+
+export async function createTournament(input: TournamentInput): Promise<Tournament> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from(DB.TABLES.tournaments)
+    .insert(input)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as unknown as Tournament;
+}
+
+export async function updateTournament(id: string, input: Partial<TournamentInput>): Promise<Tournament> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from(DB.TABLES.tournaments)
+    .update(input)
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as unknown as Tournament;
+}
+
+export async function deleteTournament(id: string): Promise<void> {
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from(DB.TABLES.tournaments)
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
 }
