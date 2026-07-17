@@ -9,12 +9,16 @@ const rawServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const missingPublic = !rawSupabaseUrl || !rawSupabaseAnonKey;
 
-// In production, public Supabase vars MUST be present.
-if (missingPublic && process.env.NODE_ENV === "production") {
-  throw new Error(
-    "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. " +
-      "Check your environment variables.",
-  );
+// In production, public Supabase vars MUST be present. We warn rather than
+// throw at module-load time so that build/collection of dynamic routes does
+// not fail; runtime handlers still fail clearly when the client is used.
+if (missingPublic) {
+  if (process.env.NODE_ENV === "production") {
+    console.error(
+      "[crickpulse] Missing NEXT_PUBLIC_SUPABASE_URL or " +
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY. Set them before handling requests.",
+    );
+  }
 }
 
 /**

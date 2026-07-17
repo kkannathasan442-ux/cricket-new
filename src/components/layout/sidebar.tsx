@@ -2,13 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, LogOut, Settings, Trophy, Users } from "lucide-react";
+import {
+  Activity,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Trophy,
+  Users,
+} from "lucide-react";
 
 import { APP_NAME } from "@/constants";
 import { cn } from "@/lib/utils";
 
 const ADMIN_LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/matches", label: "Matches", icon: Activity },
   { href: "/admin/tournaments", label: "Tournaments", icon: Trophy },
   { href: "/admin/teams", label: "Teams", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },

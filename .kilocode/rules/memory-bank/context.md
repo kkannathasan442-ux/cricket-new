@@ -32,10 +32,24 @@ Foundation is complete. Awaiting Phase 2: Tournament system, Team/Player modules
 
 - Build uses system fonts (no Google Fonts fetch) because sandbox has no network. If fonts needed later, self-host or enable TLS certs.
 - Next 16 uses `src/proxy.ts` (not middleware.ts) for session refresh — convention renamed.
-- Supabase env vars fall back to "" in dev for type-safety; required in production (env.ts throws).
+- Supabase env vars fall back to "" in dev for type-safety; production now warns (no throw at import) so dynamic route build/collection succeeds.
+
+## Recently Completed (Scoring MVP)
+
+- [x] Admin score page: `src/app/(admin)/matches/[id]/score/page.tsx`
+- [x] ScoreControls component: `src/components/admin/scoring/ScoreControls.tsx` (run +1/+2/+3/+4/+6, Wicket, Undo; scoreboard w/ score/wickets/overs/batsman/bowler)
+- [x] Scoring API: `src/app/api/match/[id]/score/route.ts` (POST; inserts ball_by_ball, updates innings totals, match_events)
+- [x] Scoring feature module: types + DB column mapping (`src/features/scoring/index.ts`), service (`service.ts`), engine (`engine.ts`)
+- [x] Uses EXISTING tables only: innings, overs, ball_by_ball, match_events. NO new match_innings/balls tables.
+- [x] Realtime intentionally NOT used (normal API + router.refresh state updates per instructions)
+
+## Open Issue / Assumption
+
+- `007_live_scoring.sql` was NOT present in the repo. Column mapping in `src/features/scoring/index.ts` `DB` object is the assumed contract for the existing tables. Reconcile `DB` mapping with the real migration before connecting a live DB.
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
 | 2026-07-17 | Phase 1 foundation: full project architecture scaffold built & verified (typecheck/lint/build green) |
+| 2026-07-17 | Scoring MVP: admin score page, ScoreControls, scoring API, feature module w/ existing-table mapping |
