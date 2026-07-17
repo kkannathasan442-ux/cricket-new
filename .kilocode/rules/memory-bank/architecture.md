@@ -1,120 +1,69 @@
-# System Patterns: Next.js Starter Template
+# System Patterns: CrickPulse
 
 ## Architecture Overview
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── layout.tsx          # Root layout + metadata
-│   ├── page.tsx            # Home page
-│   ├── globals.css         # Tailwind imports + global styles
-│   └── favicon.ico         # Site icon
-└── (expand as needed)
-    ├── components/         # React components (add when needed)
-    ├── lib/                # Utilities and helpers (add when needed)
-    └── db/                 # Database files (add via recipe)
+├── app/                          # Next.js App Router (route groups)
+│   ├── layout.tsx               # Root: providers, PWA metadata, theme
+│   ├── page.tsx                 # Landing / home
+│   ├── globals.css              # Tailwind v4 + neon theme tokens
+│   ├── (public)/                # No-login public browsing
+│   │   ├── matches/             # Live matches (loading/error/not-found)
+│   │   ├── tournaments/         # Tournament listings
+│   │   ├── stats/               # Global player stats
+│   │   └── profile/             # User profile
+│   ├── (auth)/                  # login, register
+│   └── (admin)/                 # admin dashboard (protected-ready)
+├── components/
+│   ├── ui/                      # ShadCN-style primitives + barrel
+│   ├── layout/                  # Header, MobileBottomNav, Sidebar
+│   └── common/                  # Loading, ErrorState, EmptyState, PageShell
+├── features/                    # Domain modules (auth, teams, players,
+│   │                            #   tournaments, matches, scoring, stats)
+│   └── matches/components/      # LiveMatchesGrid (foundation placeholder)
+├── lib/
+│   ├── supabase/                # client, server, admin, middleware, env
+│   └── utils.ts                 # cn() helper
+├── hooks/                       # useMediaQuery, useRealtimeSubscription
+├── services/                    # Data-access layer base (getSupabase)
+├── types/                       # Canonical DB + domain types
+├── constants/                   # App constants (nav, points, routes)
+├── providers/                   # Providers (theme + toast)
+└── database/                    # schema-plan.sql (DB planning artifact)
 ```
 
 ## Key Design Patterns
 
-### 1. App Router Pattern
+### 1. Route Groups (no URL prefix)
+- `(public)` — public, no auth (matches, tournaments, stats, profile)
+- `(auth)` — login/register, minimal chrome
+- `(admin)` — protected shell (Sidebar + bottom nav); auth gate added Phase 2
 
-Uses Next.js App Router with file-based routing:
-```
-src/app/
-├── page.tsx           # Route: /
-├── about/page.tsx     # Route: /about
-├── blog/
-│   ├── page.tsx       # Route: /blog
-│   └── [slug]/page.tsx # Route: /blog/:slug
-└── api/
-    └── route.ts       # API Route: /api
-```
+### 2. Server Components by default
+Components are RSC unless `"use client"` (nav, providers, realtime hook).
 
-### 2. Component Organization Pattern (When Expanding)
+### 3. Supabase Client Strategy (BRD 11/12)
+- `lib/supabase/client.ts` — browser singleton (anon key)
+- `lib/supabase/server.ts` — server client w/ cookie passthrough
+- `lib/supabase/admin.ts` — service-role (bypasses RLS; server-only)
+- `lib/supabase/middleware.ts` — session refresh used by `src/proxy.ts`
+- `lib/env.ts` — validated, non-undefined exports
 
-```
-src/components/
-├── ui/                # Reusable UI components (Button, Card, etc.)
-├── layout/            # Layout components (Header, Footer)
-├── sections/          # Page sections (Hero, Features, etc.)
-└── forms/             # Form components
-```
+### 4. Realtime (BRD 10/12)
+- `useRealtimeSubscription` subscribes to ONE table only (avoid full-DB listeners)
+- Planned realtime tables: ball_by_ball, innings, matches
 
-### 3. Server Components by Default
+### 5. UI / Theming
+- Tailwind v4 with CSS variable tokens (`.dark` default via next-themes)
+- Neon sports accents: `--neon`, `--neon-cyan`, `--neon-amber`, `--neon-pink`
+- Mobile-first: fixed bottom nav, `pb-safe` safe-area, md+ sidebar
 
-All components are Server Components unless marked with `"use client"`:
-```tsx
-// Server Component (default) - can fetch data, access DB
-export default function Page() {
-  return <div>Server rendered</div>;
-}
+### 6. Single Source of Truth
+- Types in `src/types`, constants in `src/constants`, data access in `src/services`
+- Feature modules never write ad-hoc queries in components
 
-// Client Component - for interactivity
-"use client";
-export default function Counter() {
-  const [count, setCount] = useState(0);
-  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
-}
-```
-
-### 4. Layout Pattern
-
-Layouts wrap pages and can be nested:
-```tsx
-// src/app/layout.tsx - Root layout
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
-}
-
-// src/app/dashboard/layout.tsx - Nested layout
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex">
-      <Sidebar />
-      <main>{children}</main>
-    </div>
-  );
-}
-```
-
-## Styling Conventions
-
-### Tailwind CSS Usage
-- Utility classes directly on elements
-- Component composition for repeated patterns
-- Responsive: `sm:`, `md:`, `lg:`, `xl:`
-
-### Common Patterns
-```tsx
-// Container
-<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-// Responsive grid
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-// Flexbox centering
-<div className="flex items-center justify-center">
-```
-
-## File Naming Conventions
-
-- Components: PascalCase (`Button.tsx`, `Header.tsx`)
-- Utilities: camelCase (`utils.ts`, `helpers.ts`)
-- Pages/Routes: lowercase (`page.tsx`, `layout.tsx`)
-- Directories: kebab-case (`api-routes/`) or lowercase (`components/`)
-
-## State Management
-
-For simple needs:
-- `useState` for local component state
-- `useContext` for shared state
-- Server Components for data fetching
-
-For complex needs (add when necessary):
-- Zustand for client state
-- React Query for server state
+## Conventions
+- Components: PascalCase; pages/routes: lowercase; dirs: lowercase
+- Aliases: `@/components`, `@/lib`, `@/hooks`, `@/features`
+- No comments in code unless requested

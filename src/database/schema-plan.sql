@@ -1,0 +1,51 @@
+-- ============================================================================
+-- CrickPulse — Database Schema Plan (Phase 2 implementation target)
+-- ----------------------------------------------------------------------------
+-- This file is a planning artifact for the PostgreSQL schema to be created in
+-- Supabase. It is NOT executed in Phase 1 (foundation only).
+--
+-- Core tables (per BRD 12):
+--   users                   auth.users mirror + roles
+--   teams                   team registry
+--   players                 global player registry (stats never reset)
+--   tournaments             tournament config
+--   tournament_teams        tournament <-> team join
+--   matches                 fixtures
+--   innings                 per-innings aggregates
+--   ball_by_ball            ball-by-ball event log (realtime source)
+--   batting_scorecard       per-player batting in an innings
+--   bowling_scorecard       per-player bowling in an innings
+--   player_stats            pre-calculated lifetime stats
+--   points_table            per-tournament standings
+--   awards                  auto-generated tournament awards
+--
+-- Design rules (BRD 12):
+--   * Single source of truth, normalised (no duplicate data)
+--   * Foreign keys with cascading rules + indexed IDs
+--   * Realtime subscribes only to ball_by_ball / innings / matches
+--   * Lifetime player_stats pre-calculated & cached
+-- ============================================================================
+
+-- Example skeleton (foundation only — expand in Phase 2):
+
+-- create table if not exists teams (
+--   id uuid primary key default gen_random_uuid(),
+--   team_name text not null,
+--   logo_url text,
+--   owner_name text not null,
+--   owner_phone text not null,
+--   created_at timestamptz not null default now()
+-- );
+
+-- create table if not exists players (
+--   id uuid primary key default gen_random_uuid(),
+--   player_name text not null,
+--   photo_url text,
+--   role text not null check (role in ('batsman','bowler','all-rounder','wicket-keeper')),
+--   jersey_name text,
+--   jersey_number int,
+--   contact_number text,
+--   created_at timestamptz not null default now()
+-- );
+
+-- NOTE: Full DDL (with RLS policies, indexes, FKs, triggers) lands in Phase 2.
