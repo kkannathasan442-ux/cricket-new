@@ -34,6 +34,7 @@ export const DB = {
     playerStats: "player_stats",
     pointsTable: "points_table",
     matchEvents: "match_events",
+    playingXi: "playing_xi",
   },
   // ball_by_ball columns
   ball: {
@@ -123,6 +124,16 @@ export const DB = {
     points: "points",
     nrr: "nrr",
     rank: "rank",
+  },
+  // playing_xi columns (normalized many-to-many: match-team -> players)
+  playingXi: {
+    id: "id",
+    matchId: "match_id",
+    teamId: "team_id",
+    playerId: "player_id",
+    isPlaying: "is_playing",
+    jerseyNumber: "jersey_number",
+    createdAt: "created_at",
   },
   // match_events columns
   matchEvent: {
@@ -306,10 +317,14 @@ export interface MatchScoringContext {
   nonStriker: PlayerSummary | null;
   bowler: PlayerSummary | null;
   recentBalls: BallEventRow[];
+  /** Confirmed Playing XI rows for this match (restricts batter/bowler picks). */
+  playingXi: PlayingXiRow[];
   /** True when the just-completed over requires a bowler change. */
   requiresBowlerChange: boolean;
   /** True when a wicket requires the next batsman selection. */
   requiresNextBatsman: boolean;
+  /** True once the Match Start Wizard has completed (toss + XI + openers). */
+  matchStarted: boolean;
 }
 
 /** Player listing used by modals (selection dropdowns). */
@@ -357,20 +372,23 @@ export interface TeamSummary {
   teamName: string;
 }
 
-export interface PlayerSummary {
+/** Raw `playing_xi` row (normalized match-team -> player selection). */
+export interface PlayingXiRow {
   id: string;
-  playerName: string;
+  match_id: string;
+  team_id: string;
+  player_id: string;
+  is_playing: boolean;
+  jersey_number: number | null;
+  created_at: string;
 }
 
-export interface MatchScoringContext {
-  matchId: string;
-  tournamentName: string | null;
-  teamA: TeamSummary;
-  teamB: TeamSummary;
-  innings: InningsRow | null;
-  battingTeam: TeamSummary | null;
-  bowlingTeam: TeamSummary | null;
-  striker: PlayerSummary | null;
-  bowler: PlayerSummary | null;
-  recentBalls: BallEventRow[];
+/** Match start configuration produced by the Match Start Wizard. */
+export interface MatchStartConfig {
+  tossWinnerId: string;
+  tossDecision: "bat" | "bowl";
+  teamAPlayers: string[];
+  teamBPlayers: string[];
+  openingBatsmen: { teamId: string; strikerId: string; nonStrikerId: string };
+  openingBowlerId: string;
 }
